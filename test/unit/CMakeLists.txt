@@ -23,3 +23,6 @@ foreach(bte ${BTES})
   endforeach(test)
 endforeach(bte)
 
+
+add_test(posix_bte stream_test posix_bte)
+add_test(fd_file stream_test fd_file)
