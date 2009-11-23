@@ -505,8 +505,9 @@ inline int TPIE_OS_FCLOSE(FILE* file) {
 #ifdef _WIN32
 #include <FCNTL.h>
 inline TPIE_OS_FILE_DESCRIPTOR portabilityInternalOpen(LPCTSTR name, int flag, TPIE_OS_MAPPING_FLAG mappingFlag) {
-    TPIE_OS_FILE_DESCRIPTOR internalHandle;	
-    switch(flag) {
+    DWORD creation_flag = FILE_FLAG_SEQUENTIAL_SCAN;
+	TPIE_OS_FILE_DESCRIPTOR internalHandle;	
+	switch(flag) {
     case _O_RDONLY: 
 	internalHandle.RDWR = false;
 	internalHandle.FileHandle =	CreateFile(	
@@ -515,7 +516,8 @@ inline TPIE_OS_FILE_DESCRIPTOR portabilityInternalOpen(LPCTSTR name, int flag, T
 		FILE_SHARE_READ | FILE_SHARE_WRITE,
 		0,
 	    OPEN_EXISTING, 
-	    0, 0);
+	    creation_flag,
+		0);
 	break;
     case _O_EXCL:	
 	internalHandle.RDWR = true;
@@ -525,7 +527,8 @@ inline TPIE_OS_FILE_DESCRIPTOR portabilityInternalOpen(LPCTSTR name, int flag, T
 		FILE_SHARE_READ | FILE_SHARE_WRITE,
 		0,
 	    CREATE_NEW, 
-	    0, 0);
+	    creation_flag,
+		0);
 	break;
     case _O_RDWR:	
 	internalHandle.RDWR = true;
@@ -535,7 +538,8 @@ inline TPIE_OS_FILE_DESCRIPTOR portabilityInternalOpen(LPCTSTR name, int flag, T
         FILE_SHARE_READ | FILE_SHARE_WRITE,
 		0,
 	    OPEN_EXISTING, 
-	    0, 0);
+	    creation_flag,
+		0);
 	break;
     default :		
 	internalHandle.RDWR = false;
@@ -545,7 +549,8 @@ inline TPIE_OS_FILE_DESCRIPTOR portabilityInternalOpen(LPCTSTR name, int flag, T
 		FILE_SHARE_READ | FILE_SHARE_WRITE,
 		0,
 	    OPEN_EXISTING, 
-	    0, 0);
+	    creation_flag,
+		0);
     };
     internalHandle.useFileMapping = mappingFlag;
     DWORD dwFileSize = GetFileSize(internalHandle.FileHandle,NULL);
@@ -715,8 +720,8 @@ inline int TPIE_OS_MSYNC(char* addr, size_t len,int flags) {
 
 
 #ifdef _WIN32
-inline bool TPIE_OS_EXISTS(const std::string & path) {
-	return (GetFileAttributes(fileName) != 0xFFFFFFFF);
+inline bool TPIE_OS_EXISTS(const std::string & fileName) {
+	return (GetFileAttributes(fileName.c_str()) != 0xFFFFFFFF);
 }
 #else
 inline bool TPIE_OS_EXISTS(const std::string & path) {							
