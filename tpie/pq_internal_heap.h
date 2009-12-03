@@ -35,6 +35,9 @@ namespace tpie {
 
 template <typename T, typename Comparator = std::less<T> >
 class pq_internal_heap {
+private:
+    Comparator comp_;
+
 public:
     /////////////////////////////////////////////////////////
     ///
@@ -43,7 +46,8 @@ public:
     /// \param max_size Maximum size of queue
     ///
     /////////////////////////////////////////////////////////
-    pq_internal_heap(TPIE_OS_SIZE_T max_size) { 
+    pq_internal_heap(TPIE_OS_SIZE_T max_size, Comparator c=Comparator()):
+		comp_(c) { 
 	pq = new T[max_size]; 
 	sz = 0; 
     }
@@ -67,7 +71,7 @@ public:
     /// \return Boolean - empty or not
     ///
     /////////////////////////////////////////////////////////
-    bool empty() { return sz == 0; }
+    inline bool empty() const { return sz == 0; }
 
     /////////////////////////////////////////////////////////
     ///
@@ -76,7 +80,7 @@ public:
     /// \return Queue size
     ///
     /////////////////////////////////////////////////////////
-    TPIE_OS_SIZE_T size() {
+    inline TPIE_OS_SIZE_T size() const{
 	return sz;
     }
 
@@ -87,7 +91,7 @@ public:
     /// \param v The element that should be inserted
     ///
     /////////////////////////////////////////////////////////
-    void insert(T v) { 
+    inline void insert(const T & v) { 
 	pq[sz++] = v; 
 	bubbleUp(sz-1);
     }
@@ -99,10 +103,17 @@ public:
     /// \return Minimal element
     ///
     /////////////////////////////////////////////////////////
-    T delmin() { 
+    inline T & delmin() { 
 	swap(pq[0], pq[--sz]);
 	bubbleDown(); 
 	return pq[sz];
+    }
+
+	
+    inline T delminAndInsert(T item) { 
+		swap(pq[0], item);
+		bubbleDown(); 
+		return item;
     }
 
     /////////////////////////////////////////////////////////
@@ -112,7 +123,7 @@ public:
     /// \return Minimal element
     ///
     /////////////////////////////////////////////////////////
-    T peekmin() {
+    const T & peekmin() const {
 	return pq[0]; 
     }
 	
@@ -139,7 +150,6 @@ public:
     }
 	
 private:
-    Comparator comp_;
 
     inline TPIE_OS_SIZE_T left_child(TPIE_OS_SIZE_T k) {
 	return 2*k+1;
