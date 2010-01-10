@@ -68,7 +68,7 @@ int main() {
 		uint64_t x[1024];
 		for(uint64_t i=0; i < 1024; ++i) x[i]=42;
 		stream<uint64_t> s("tmp", READ_STREAM);
-		for(size_t i=0; i < size; ++i) {TPIE_OS_OFFSET y=1024; s.read_array(x,&y);}
+		for(size_t i=0; i < size; ++i) {stream_offset_type y=1024; s.read_array(x,&y);}
 	}
 	getTestRealtime(end);
 	std::cout << " " << testRealtimeDiff(start,end) << std::endl;

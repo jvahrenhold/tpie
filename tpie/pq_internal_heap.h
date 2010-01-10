@@ -43,12 +43,12 @@ public:
     /// \param max_size Maximum size of queue
     ///
     /////////////////////////////////////////////////////////
-    pq_internal_heap(TPIE_OS_SIZE_T max_size) { 
+    pq_internal_heap(memory_size_type max_size) { 
 	pq = new T[max_size]; 
 	sz = 0; 
     }
 
-    pq_internal_heap(T* arr, TPIE_OS_SIZE_T length) {
+    pq_internal_heap(T* arr, memory_size_type length) {
 	pq = arr;
 	sz = length;
     }
@@ -76,7 +76,7 @@ public:
     /// \return Queue size
     ///
     /////////////////////////////////////////////////////////
-    TPIE_OS_SIZE_T size() {
+    memory_size_type size() {
 	return sz;
     }
 
@@ -123,7 +123,7 @@ public:
     /// \param ne Size
     ///
     /////////////////////////////////////////////////////////
-    void set_size(TPIE_OS_SIZE_T ne) {
+    void set_size(memory_size_type ne) {
 	sz = ne; 
     }
 	
@@ -141,21 +141,21 @@ public:
 private:
     Comparator comp_;
 
-    inline TPIE_OS_SIZE_T left_child(TPIE_OS_SIZE_T k) {
+    inline memory_size_type left_child(memory_size_type k) {
 	return 2*k+1;
     }
 
-    inline TPIE_OS_SIZE_T right_child(TPIE_OS_SIZE_T k){
+    inline memory_size_type right_child(memory_size_type k){
 	return 2*k+2;
     }
 
-    inline TPIE_OS_SIZE_T parent(TPIE_OS_SIZE_T k){
+    inline memory_size_type parent(memory_size_type k){
 	return (k-1)/2;
     }
 
     void bubbleDown() { 
-	TPIE_OS_SIZE_T k=0;
-	TPIE_OS_SIZE_T j;
+	memory_size_type k=0;
+	memory_size_type j;
 	while((j=left_child(k)) < sz) {
 	    if(j < sz-1 && comp_(pq[j+1], pq[j])) j++; // compare, pq[j] > pq[j+1]
 	    if(! comp_(pq[j], pq[k]) ) break; // compare, pq[k] > pq[j]
@@ -165,8 +165,8 @@ private:
     }
   
 	//  Parameter has to be signed!
-    void bubbleUp(TPIE_OS_SSIZE_T k) {
-	TPIE_OS_SSIZE_T j;
+    void bubbleUp(memory_offset_type k) {
+	memory_offset_type j;
 	while(k > 0 && comp_(pq[k], pq[(j=parent(k))])) { // compare, pq[k/2] > pq[k]
 	    swap(pq[k], pq[j]);
 	    k = j; 
@@ -174,7 +174,7 @@ private:
     }
 		
     T *pq; 
-    TPIE_OS_SIZE_T sz;
+    memory_size_type sz;
 };
 
     }  // ami namespace

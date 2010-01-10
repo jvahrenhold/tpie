@@ -129,18 +129,18 @@ namespace tpie {
 	    // usage of lbf is discouraged.
 	    stream_ufs(const std::string& dev_path, 
 		       stream_type    st,
-		       TPIE_OS_SIZE_T lbf = STREAM_UFS_BLOCK_FACTOR);
+		       memory_size_type lbf = STREAM_UFS_BLOCK_FACTOR);
 	
 	    // A substream constructor.
 	    stream_ufs(stream_ufs     *super_stream,
 		       stream_type    st, 
-		       TPIE_OS_OFFSET sub_begin, 
-		       TPIE_OS_OFFSET sub_end);
+		       stream_offset_type sub_begin, 
+		       stream_offset_type sub_end);
 	
 	    // A psuedo-constructor for substreams.
 	    err new_substream(stream_type    st, 
-			      TPIE_OS_OFFSET sub_begin,
-			      TPIE_OS_OFFSET sub_end,
+			      stream_offset_type sub_begin,
+			      stream_offset_type sub_end,
 			      base_t **sub_stream);
     
 	    // Destructor
@@ -150,22 +150,22 @@ namespace tpie {
 	    inline err write_item(const T & elt);
 	
 	    // Move to a specific position in the stream.
-	    err seek(TPIE_OS_OFFSET offset);
+	    err seek(stream_offset_type offset);
 	
 	    // Truncate the stream.
-	    err truncate(TPIE_OS_OFFSET offset);
+	    err truncate(stream_offset_type offset);
 
 	    // Return the number of items in the stream.
-	    inline TPIE_OS_OFFSET stream_len() const;
+	    inline stream_offset_type stream_len() const;
 	
 	    // Return the current position in the stream.
-	    inline TPIE_OS_OFFSET tell() const;
+	    inline stream_offset_type tell() const;
 	
 	    // Query memory usage
-	    err main_memory_usage(TPIE_OS_SIZE_T  *usage,
+	    err main_memory_usage(memory_size_type  *usage,
 				  mem::stream_usage usage_type);
 	
-	    TPIE_OS_SIZE_T chunk_size() const;
+	    memory_size_type chunk_size() const;
 	
 	private:
 	
@@ -183,8 +183,8 @@ namespace tpie {
 	
 	    inline err advance_current ();
 	
-	    inline TPIE_OS_OFFSET item_off_to_file_off (TPIE_OS_OFFSET itemOffset) const;
-	    inline TPIE_OS_OFFSET file_off_to_item_off (TPIE_OS_OFFSET fileOffset) const;
+	    inline stream_offset_type item_off_to_file_off (stream_offset_type itemOffset) const;
+	    inline stream_offset_type file_off_to_item_off (stream_offset_type fileOffset) const;
 	
 	    // Descriptor of the mapped file.
 	    TPIE_OS_FILE_DESCRIPTOR m_fileDescriptor;
@@ -194,7 +194,7 @@ namespace tpie {
 	    // [tavi 01/27/02]
 	    // This is the position in the file where the pointer is. We can
 	    // save some lseek() calls by maintaining this.
-	    TPIE_OS_OFFSET m_filePointer;
+	    stream_offset_type m_filePointer;
 	
 	    // The current item (mapped in)
 	    T *m_currentItem;
@@ -212,16 +212,16 @@ namespace tpie {
 	
 	    // When m_blockValid is true, this is the Offset of m_currentBlock in the
 	    // underlying Unix file.
-	    TPIE_OS_OFFSET m_currentBlockFileOffset;	
+	    stream_offset_type m_currentBlockFileOffset;	
 	
-	    TPIE_OS_SIZE_T m_itemsPerBlock;
+	    memory_size_type m_itemsPerBlock;
 	
 	
 #if UFS_DOUBLE_BUFFER
 	    // for use in double buffering, when one is implemented using
 	    // the aio interface.
 	    T              *next_block;		// ptr to next block 
-	    TPIE_OS_OFFSET f_next_block;		// position of next block
+	    stream_offset_type f_next_block;		// position of next block
 	    int            have_next_block;		// is next block mapped?
 	
 #endif	/* UFS_DOUBLE_BUFFER */
@@ -239,7 +239,7 @@ namespace tpie {
 	template <class T>
 	stream_ufs<T>::stream_ufs (const std::string& dev_path,
 				   stream_type    st,
-				   TPIE_OS_SIZE_T lbf) : 
+				   memory_size_type lbf) : 
 	    m_fileDescriptor(),
 	    m_itemsAlignedWithBlock(false),
 	    m_filePointer(0),
@@ -497,7 +497,7 @@ namespace tpie {
 	    }				// end of switch
 	
 	    // We can't handle streams of large objects.
-	    if (static_cast<TPIE_OS_SSIZE_T>(sizeof (T)) > m_header->m_blockSize) {
+	    if (static_cast<memory_offset_type>(sizeof (T)) > m_header->m_blockSize) {
 	    
 		m_status = STREAM_STATUS_INVALID;
 	    
@@ -535,8 +535,8 @@ namespace tpie {
 	template <class T>
 	stream_ufs<T>::stream_ufs (stream_ufs     *super_stream,
 				   stream_type    st,
-				   TPIE_OS_OFFSET sub_begin, 
-				   TPIE_OS_OFFSET sub_end) :
+				   stream_offset_type sub_begin, 
+				   stream_offset_type sub_end) :
 	    m_fileDescriptor(),
 	    m_itemsAlignedWithBlock(false),
 	    m_filePointer(0),
@@ -648,7 +648,7 @@ namespace tpie {
 	    // within the stream.  We need to convert them to offsets within
 	    // the stream where items are found.
 	
-	    TPIE_OS_OFFSET super_item_begin = 
+	    stream_offset_type super_item_begin = 
 		file_off_to_item_off (super_stream->m_logicalBeginOfStream);
 	
 	    m_logicalBeginOfStream = item_off_to_file_off(super_item_begin + sub_begin);
@@ -716,8 +716,8 @@ namespace tpie {
 // cannot have virtual constructors.
 	template <class T>
 	err stream_ufs<T>::new_substream (stream_type    st,
-					  TPIE_OS_OFFSET sub_begin,
-					  TPIE_OS_OFFSET sub_end,
+					  stream_offset_type sub_begin,
+					  stream_offset_type sub_end,
 					  base_t **sub_stream) {
 	    // Check permissions.
 	    if ((st != READ_STREAM) && 
@@ -1008,7 +1008,7 @@ namespace tpie {
 // Note that in a substream we do not charge for the memory used by
 // the header, since it is accounted for in the 0 level superstream.
 	template <class T>
-	err stream_ufs<T>::main_memory_usage (TPIE_OS_SIZE_T  *usage,
+	err stream_ufs<T>::main_memory_usage (memory_size_type  *usage,
 					      mem::stream_usage usage_type) {
 
 	    switch (usage_type) {
@@ -1055,17 +1055,17 @@ namespace tpie {
     
 // Return the number of items in the stream.
 	template <class T> 
-	TPIE_OS_OFFSET stream_ufs<T>::stream_len () const {
+	stream_offset_type stream_ufs<T>::stream_len () const {
 	    return file_off_to_item_off (m_logicalEndOfStream) - 
 		file_off_to_item_off (m_logicalBeginOfStream);
 	};
     
 // Move to a specific position.
 	template <class T> 
-	err stream_ufs<T>::seek (TPIE_OS_OFFSET offset) {
+	err stream_ufs<T>::seek (stream_offset_type offset) {
 	
 	    err retval = NO_ERROR;
-	    TPIE_OS_OFFSET new_offset;
+	    stream_offset_type new_offset;
 	
 	    if ((offset < 0) ||
 		(offset > file_off_to_item_off (m_logicalEndOfStream) - 
@@ -1083,7 +1083,7 @@ namespace tpie {
 	    new_offset = item_off_to_file_off (
 		file_off_to_item_off (m_logicalBeginOfStream) + offset);
 	
-	    if ((static_cast<TPIE_OS_SIZE_T>(reinterpret_cast<char*>(m_currentItem) - 
+	    if ((static_cast<memory_size_type>(reinterpret_cast<char*>(m_currentItem) - 
 					     reinterpret_cast<char*>(m_currentBlock)) 
 		 >= m_header->m_blockSize)
 		|| (((new_offset - m_osBlockSize) / m_header->m_blockSize) !=
@@ -1096,7 +1096,7 @@ namespace tpie {
 		if (m_blockValid) {
 		
 		    // We have to adjust current.
-		    register TPIE_OS_OFFSET internal_block_offset;
+		    register stream_offset_type internal_block_offset;
 		
 		    internal_block_offset = 
 			file_off_to_item_off (new_offset) % m_itemsPerBlock;
@@ -1113,17 +1113,17 @@ namespace tpie {
 	}
 
 	template <class T> 
-	TPIE_OS_OFFSET stream_ufs<T>::tell() const {
+	stream_offset_type stream_ufs<T>::tell() const {
 	    return file_off_to_item_off(m_fileOffset);
 	}
 
 // Truncate the stream.
 	template <class T> 
-	err stream_ufs<T>::truncate (TPIE_OS_OFFSET offset) {
+	err stream_ufs<T>::truncate (stream_offset_type offset) {
 	
 	    err retval = NO_ERROR;
-	    TPIE_OS_OFFSET new_offset;
-	    TPIE_OS_OFFSET block_offset;
+	    stream_offset_type new_offset;
+	    stream_offset_type block_offset;
 	
 	    // Sorry, we can't truncate a substream.
 	    if (m_substreamLevel) {
@@ -1143,7 +1143,7 @@ namespace tpie {
 	    // We also need to check that we have the correct block mapped in (
 	    // m_fileOffset does not always point into the current block!) 
 	    // - see comment in seek()
-	    if ((static_cast<TPIE_OS_SIZE_T>(reinterpret_cast<char*>(m_currentItem) - 
+	    if ((static_cast<memory_size_type>(reinterpret_cast<char*>(m_currentItem) - 
 					   reinterpret_cast<char*>(m_currentBlock)) 
 		 >= m_header->m_blockSize)
 		|| (((new_offset - m_osBlockSize) / m_header->m_blockSize) !=
@@ -1184,7 +1184,7 @@ namespace tpie {
 		// the current block then the current block is still valid, 
 		// but the current item pointer may not be valid. 
 		// We have to adjust m_currentItem.
-		TPIE_OS_OFFSET internal_block_offset = file_off_to_item_off (new_offset) % m_itemsPerBlock;
+		stream_offset_type internal_block_offset = file_off_to_item_off (new_offset) % m_itemsPerBlock;
 		m_currentItem = m_currentBlock + internal_block_offset;
 	    }
 	
@@ -1200,13 +1200,13 @@ namespace tpie {
 	template <class T>
 	stream_header * stream_ufs<T>::map_header () {
 	
-	    TPIE_OS_OFFSET file_end = TPIE_OS_LSEEK(m_fileDescriptor, 0, TPIE_OS_FLAG_SEEK_END);
+	    stream_offset_type file_end = TPIE_OS_LSEEK(m_fileDescriptor, 0, TPIE_OS_FLAG_SEEK_END);
 	    stream_header *ptr_to_header = NULL;
 	
 	    // If the underlying file is not at least long enough to contain
 	    // the header block, then, assuming the stream is writable, we have
 	    // to create the space on disk by doing an explicit write().  
-	    if (file_end  < static_cast<TPIE_OS_OFFSET>(m_osBlockSize)) {
+	    if (file_end  < static_cast<stream_offset_type>(m_osBlockSize)) {
 
 		if (m_readOnly) {
 		
@@ -1243,7 +1243,7 @@ namespace tpie {
 		    }
 		
 		    if (TPIE_OS_WRITE (m_fileDescriptor, tmp_buffer, m_osBlockSize) !=
-			static_cast<TPIE_OS_SSIZE_T>(m_osBlockSize)) {
+			static_cast<memory_offset_type>(m_osBlockSize)) {
 		    
 			m_osErrno = errno;
 		    
@@ -1306,7 +1306,7 @@ namespace tpie {
 	    if (TPIE_OS_READ (m_fileDescriptor, 
 			      tmp_buffer, 
 			      m_osBlockSize) !=
-		static_cast<TPIE_OS_SSIZE_T>(m_osBlockSize)) {
+		static_cast<memory_offset_type>(m_osBlockSize)) {
 	    
 		m_osErrno = errno;
 		delete [] tmp_buffer;
@@ -1333,7 +1333,7 @@ namespace tpie {
 	template <class T>
 	inline err stream_ufs<T>::validate_current () {
 	
-	    TPIE_OS_SIZE_T block_space;	// The space left in the current block.
+	    memory_size_type block_space;	// The space left in the current block.
 	
 	    // If the current block is valid and current points into it and has
 	    // enough room in the block for a full item, we are fine.  If it is
@@ -1379,7 +1379,7 @@ namespace tpie {
 // m_fileOffset is used to determine what block is needed.
 	template <class T> err stream_ufs<T>::map_current (void) {
 	
-	    TPIE_OS_OFFSET block_offset;
+	    stream_offset_type block_offset;
 	    bool do_mmap = false;
 	
 	    // We should not currently have a valid block.
@@ -1393,7 +1393,7 @@ namespace tpie {
 	    // we either record this fact and return (if the stream is read
 	    // only) or ftruncate() out to the end of the current block.
 	    if (m_fileLength < 
-		block_offset + static_cast<TPIE_OS_OFFSET>(m_header->m_blockSize)) {
+		block_offset + static_cast<stream_offset_type>(m_header->m_blockSize)) {
 		if (m_readOnly) {
 
 		    return END_OF_STREAM;
@@ -1436,7 +1436,7 @@ namespace tpie {
 		    m_blockValid = true;
 		    m_blockDirty = false;
 		
-		    register TPIE_OS_OFFSET internal_block_offset;
+		    register stream_offset_type internal_block_offset;
 		
 		    internal_block_offset =
 			file_off_to_item_off (m_fileOffset) % m_itemsPerBlock;
@@ -1506,7 +1506,7 @@ namespace tpie {
 		if (TPIE_OS_READ (m_fileDescriptor, 
 				  reinterpret_cast<char*>(m_currentBlock), 
 				  m_header->m_blockSize) !=
-		    static_cast<TPIE_OS_SSIZE_T>(m_header->m_blockSize)) {
+		    static_cast<memory_offset_type>(m_header->m_blockSize)) {
 		
 		    m_status = STREAM_STATUS_INVALID;
 		    m_osErrno = errno;
@@ -1534,7 +1534,7 @@ namespace tpie {
 	
 	    // The offset, in terms of number of items, that current should
 	    // have relative to curr_block.
-	    register TPIE_OS_OFFSET internal_block_offset;
+	    register stream_offset_type internal_block_offset;
 	
 	    internal_block_offset =
 		file_off_to_item_off (m_fileOffset) % m_itemsPerBlock;
@@ -1549,7 +1549,7 @@ namespace tpie {
 	template <class T> 
 	err stream_ufs<T>::unmap_current (void) {
 	
-	    ///   TPIE_OS_OFFSET lseek_retval;
+	    ///   stream_offset_type lseek_retval;
 	
 	    // We should currently have a valid block.
 	    tp_assert (m_blockValid, "No block is mapped in.");
@@ -1582,7 +1582,7 @@ namespace tpie {
 		    m_osErrno = errno;
 		
 		    TP_LOG_FATAL_ID ("write() failed to unmap current block.");
-		    TP_LOG_FATAL_ID (static_cast<TPIE_OS_OFFSET>(m_header->m_blockSize));
+		    TP_LOG_FATAL_ID (static_cast<stream_offset_type>(m_header->m_blockSize));
 		    TP_LOG_FATAL_ID (strerror(m_osErrno));
 
 			#ifdef TPIE_USE_EXCEPTIONS
@@ -1623,8 +1623,8 @@ namespace tpie {
 	}
 
 	template <class T>
-	inline TPIE_OS_OFFSET stream_ufs<T>::item_off_to_file_off (TPIE_OS_OFFSET item_off) const {
-	    TPIE_OS_OFFSET file_off;
+	inline stream_offset_type stream_ufs<T>::item_off_to_file_off (stream_offset_type item_off) const {
+	    stream_offset_type file_off;
 	
 	    if (!m_itemsAlignedWithBlock) {
 	    
@@ -1647,8 +1647,8 @@ namespace tpie {
 	}
     
 	template <class T>
-	inline TPIE_OS_OFFSET stream_ufs<T>::file_off_to_item_off (TPIE_OS_OFFSET file_off) const {
-	    TPIE_OS_OFFSET item_off;
+	inline stream_offset_type stream_ufs<T>::file_off_to_item_off (stream_offset_type file_off) const {
+	    stream_offset_type item_off;
 	
 	    if (!m_itemsAlignedWithBlock) {
 	    
@@ -1671,7 +1671,7 @@ namespace tpie {
 	}
     
 	template <class T> 
-	TPIE_OS_SIZE_T stream_ufs<T>::chunk_size (void) const {
+	memory_size_type stream_ufs<T>::chunk_size (void) const {
 	    return m_itemsPerBlock;
 	}
     
@@ -1679,7 +1679,7 @@ namespace tpie {
 #if STREAM_UFS_READ_AHEAD
 	template <class T> void stream_ufs<T>::read_ahead (void) {
 
-	    TPIE_OS_OFFSET f_curr_block;
+	    stream_offset_type f_curr_block;
 	
 	    // The current block had better already be valid or we made a
 	    // mistake in being here.

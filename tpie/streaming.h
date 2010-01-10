@@ -46,7 +46,7 @@ namespace tpie {
 		typedef typename s_t::item_type item_type;
 
 		inline stream_sink(s_t * s): stream(s) {}
-		inline void begin(TPIE_OS_OFFSET size=0) {}
+		inline void begin(stream_offset_type size=0) {}
 		inline void push(const item_type & item) {
 			stream->write_item(item);
 		}

@@ -55,7 +55,7 @@ namespace tpie {
 		streaming_sort(dest_t & d, comp_t c=comp_t(), key_t k=key_t()):
 			comp(c,k), dest(d) {};
 
-		void begin(TPIE_OS_OFFSET size=0) {}
+		void begin(stream_offset_type size=0) {}
 		void end() {
 			std::sort(mem.begin(), mem.end(), comp);
 			dest.begin(mem.size());
