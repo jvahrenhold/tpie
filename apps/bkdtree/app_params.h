@@ -79,7 +79,7 @@ public:
   char file_name_stats[MAX_PATH_LENGTH];
   char file_name_wquery[MAX_PATH_LENGTH];
   char nodup_file_name[MAX_PATH_LENGTH];
-  char* structure_name;
+  const char* structure_name;
   bool do_sort;
   bool do_load;
   bool do_wquery_from_file;
