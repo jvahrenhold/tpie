@@ -110,6 +110,7 @@ set (OTHER_SOURCES
 	portability.cpp
 	tpie_log.cpp
 	tempname.cpp
+	util.cpp
 	)
 
 source_group("BTE" FILES ${BTE_HEADERS} ${BTE_SOURCES})
