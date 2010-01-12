@@ -37,7 +37,7 @@ using namespace tpie::ami;
 using namespace std;
 
 // Key type.
-typedef TPIE_OS_OFFSET bkey_t;
+typedef stream_offset_type bkey_t;
 
 // Element type for the btree.
 struct el_t {
@@ -75,15 +75,15 @@ typedef stream< el_t > stream_t;
 #define DELETE_COUNT 500
 
 // Global variables.
-TPIE_OS_OFFSET bulk_load_count;
-TPIE_OS_OFFSET insert_count = 5000;
-TPIE_OS_OFFSET range_search_lo = 0;
-TPIE_OS_OFFSET range_search_hi = 10000000;
+stream_offset_type bulk_load_count;
+stream_offset_type insert_count = 5000;
+stream_offset_type range_search_lo = 0;
+stream_offset_type range_search_hi = 10000000;
 
 int main(int argc, char **argv) {
 
-  TPIE_OS_OFFSET i;
-  TPIE_OS_OFFSET j;
+  stream_offset_type i;
+  stream_offset_type j;
   el_t s[DELETE_COUNT], ss;
   cpu_timer wt;
   char *base_file = NULL;
@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
   std::cout << "\n";
   std::cout << "Element size: " << sizeof(el_t) << " bytes. "
        << "Key size: " << sizeof(bkey_t) << " bytes.\n";
-  TPIE_OS_SRANDOM((unsigned int)TPIE_OS_TIME(NULL));
+  seed_random((unsigned int)TPIE_OS_TIME(NULL));
 
   // Timing stream write.
   std::cout << "BEGIN Stream write\n";
@@ -115,7 +115,7 @@ int main(int argc, char **argv) {
   std::cout << "\tCreating stream with " << bulk_load_count << " random elements.\n";
   wt.start();
   for (j = 0; j < bulk_load_count; j++) {
-    is->write_item(el_t(long((TPIE_OS_RANDOM()/MAX_RANDOM) * MAX_VALUE)));
+	  is->write_item(el_t(long((tpie::random()/MAX_RANDOM) * MAX_VALUE)));
   }
   wt.stop();
   std::cout << "END Stream write " << wt << "\n";
@@ -169,7 +169,7 @@ int main(int argc, char **argv) {
   delete is;
 
   std::cout << "Tree size: " << u_btree->size() << " elements. Tree height: " 
-       << static_cast<TPIE_OS_OUTPUT_SIZE_T>(u_btree->height()) << ".\n";
+       << (u_btree->height()) << ".\n";
   wt.reset();
 
   delete u_btree;
@@ -197,7 +197,7 @@ int main(int argc, char **argv) {
     if (i <= DELETE_COUNT)
       s[i-1] = ss = el_t(i+100000);
     else
-      ss = el_t(long((TPIE_OS_RANDOM()/MAX_RANDOM) * MAX_VALUE));
+		ss = el_t(long((tpie::random()/MAX_RANDOM) * MAX_VALUE));
     u_btree->insert(ss);
     if (i % (insert_count/10) == 0)
       std::cout << i << " " << std::flush;
@@ -207,7 +207,7 @@ int main(int argc, char **argv) {
   std::cout << "END Insert " << wt << "\n";
   
   std::cout << "Tree size: " << u_btree->size() << " elements. Tree height: " 
-       << static_cast<TPIE_OS_OUTPUT_SIZE_T>(u_btree->height()) << ".\n";
+       << (u_btree->height()) << ".\n";
   wt.reset();
 
 
@@ -258,7 +258,7 @@ int main(int argc, char **argv) {
   
 
   std::cout << "Tree size: " << u_btree->size() << " elements. Tree height: " 
-       << static_cast<TPIE_OS_OUTPUT_SIZE_T>(u_btree->height()) << ".\n";
+       << (u_btree->height()) << ".\n";
 
   stats_tree bts = u_btree->stats();
   delete u_btree;

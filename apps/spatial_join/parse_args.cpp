@@ -106,14 +106,14 @@ void parse_args(int argc, char **argv, struct options *application_opts,
   all_opts[l_app_o+l_std_o] = null_opt;
 
   int idx;
-  TPIE_OS_SIZE_T mm_sz = DEFAULT_TEST_MM_SIZE;
+  memory_size_type mm_sz = DEFAULT_TEST_MM_SIZE;
   unsigned int rnd_seed = DEFAULT_RANDOM_SEED;
   char *opt_arg;
 
   while ((idx = getopts(argc, argv, all_opts, &opt_arg)) != 0) {
     switch (idx) {
     case 1: 
-      mm_sz = max(TPIE_OS_SIZE_T(128*1024), parse_number(opt_arg));
+      mm_sz = max(memory_size_type(128*1024), parse_number(opt_arg));
       break;
     case 2:
       verbose = true; 
@@ -135,7 +135,7 @@ void parse_args(int argc, char **argv, struct options *application_opts,
   MM_manager.set_memory_limit(mm_sz);
   //LOG_APP_DEBUG_ID2("Setting TPIE memory size to: ", mm_sz);
 
-  TPIE_OS_SRANDOM(rnd_seed);
+  seed_random(rnd_seed);
   //LOG_APP_DEBUG_ID2("Setting random seed to: ", rnd_seed);
   
   delete [] all_opts;

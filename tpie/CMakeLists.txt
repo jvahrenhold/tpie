@@ -141,6 +141,7 @@ set (OTHER_SOURCES
 	portability.cpp
 	tpie_log.cpp
 	tempname.cpp
+	util.cpp
 	)
 
 source_group("BTE" FILES ${BTE_HEADERS} ${BTE_SOURCES})
@@ -152,6 +153,7 @@ set(STREAM ${STREAM_HEADERS} ${STREAM_SOURCES})
 set(STREAMING ${STREAMING_HEADERS})
 
 add_library(tpie ${BTE} ${AMI} ${OTHER} ${STREAMING} ${STREAM})
+target_link_libraries(tpie ${Boost_LIBRARIES})
 
 install(TARGETS tpie DESTINATION ${LIB_INSTALL_DIR}) 
 install(FILES ${OTHER_HEADERS} ${AMI_HEADERS} DESTINATION ${HEADERS_INSTALL_DIR})

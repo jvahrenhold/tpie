@@ -53,25 +53,25 @@ union sort_obj
 class scan_random_so : ami::scan_object {
 
 private:
-    TPIE_OS_OFFSET m_max;
-    TPIE_OS_OFFSET m_remaining;
+    stream_offset_type m_max;
+    stream_offset_type m_remaining;
 
 public:
-    scan_random_so(TPIE_OS_OFFSET count = 1000, int seed = 17);
+    scan_random_so(stream_offset_type count = 1000, int seed = 17);
     virtual ~scan_random_so(void);
     ami::err initialize(void);
     ami::err operate(sort_obj *out1, ami::SCAN_FLAG *sf);
 };
 
 
-scan_random_so::scan_random_so(TPIE_OS_OFFSET count, int seed) : 
+scan_random_so::scan_random_so(stream_offset_type count, int seed) : 
     m_max(count), m_remaining(count) {
 
     TP_LOG_APP_DEBUG("scan_random_so seed = ");
     TP_LOG_APP_DEBUG(seed);
     TP_LOG_APP_DEBUG('\n');
 
-    TPIE_OS_SRANDOM(seed);
+    seed_random(seed);
 }
 
 scan_random_so::~scan_random_so(void)
@@ -89,7 +89,7 @@ ami::err scan_random_so::initialize(void)
 ami::err scan_random_so::operate(sort_obj *out1, ami::SCAN_FLAG *sf)
 {
     if ((*sf = (m_remaining-- >0))) {
-        out1->key_val = TPIE_OS_RANDOM();
+        out1->key_val = tpie::random();
         return ami::SCAN_CONTINUE;
     } else {
         return ami::SCAN_DONE;

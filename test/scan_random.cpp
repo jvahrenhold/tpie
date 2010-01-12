@@ -21,17 +21,17 @@
 
 // Get information on the configuration to test.
 #include "app_config.h"
-
+#include <tpie/util.h>
 #include "scan_random.h"
 
-scan_random::scan_random(TPIE_OS_OFFSET count, int seed) :
+scan_random::scan_random(stream_offset_type count, int seed) :
     m_max(count), m_remaining(count) {
 
     TP_LOG_APP_DEBUG("scan_random seed = ");
-    TP_LOG_APP_DEBUG(static_cast<TPIE_OS_LONGLONG>(seed));
+    TP_LOG_APP_DEBUG(seed);
     TP_LOG_APP_DEBUG('\n');
 
-    TPIE_OS_SRANDOM(seed);
+	tpie::seed_random(seed);
 }
 
 scan_random::~scan_random(void) {
@@ -48,7 +48,7 @@ ami::err scan_random::initialize(void) {
 
 ami::err scan_random::operate(int *out1, ami::SCAN_FLAG *sf) {
     if ((*sf = (m_remaining-- != 0))) {
-        *out1 = TPIE_OS_RANDOM();
+        *out1 = tpie::random();
         return ami::SCAN_CONTINUE;
     } 
     else {

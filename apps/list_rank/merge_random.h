@@ -38,7 +38,7 @@
 template<class T>
 class merge_random : public AMI_merge_base<T> {
 private:
-    TPIE_OS_SIZE_T input_arity;
+    memory_size_type input_arity;
     merge_heap_op<int> *mheap;
 #if DEBUG_ASSERTIONS
     unsigned int input_count, output_count;
@@ -46,7 +46,7 @@ private:
 public:
     merge_random(int seed = 0);
     virtual ~merge_random(void);
-    AMI_err initialize(TPIE_OS_SIZE_T arity, CONST T * CONST *in,
+    AMI_err initialize(memory_size_type arity, CONST T * CONST *in,
                        AMI_merge_flag *taken_flags,
                        int &taken_index);
     AMI_err operate(CONST T * CONST *in, AMI_merge_flag *taken_flags,
@@ -60,7 +60,7 @@ template<class T>
 merge_random<T>::merge_random(int seed)
 {
     if (seed) {
-        TPIE_OS_SRANDOM(seed);
+        seed_random(seed);
     }
     mheap = NULL;
 }
@@ -75,12 +75,12 @@ merge_random<T>::~merge_random(void)
 }
 
 template<class T>
-AMI_err merge_random<T>::initialize(TPIE_OS_SIZE_T arity,
+AMI_err merge_random<T>::initialize(memory_size_type arity,
                                     CONST T * CONST *in,
                                     AMI_merge_flag * /*taken_flags*/,
                                     int &taken_index)
 {
-    TPIE_OS_SIZE_T ii;
+    memory_size_type ii;
     int rnum;
     
     input_arity = arity;
@@ -97,7 +97,7 @@ AMI_err merge_random<T>::initialize(TPIE_OS_SIZE_T arity,
     // Insert an element with random priority for each non-empty stream.
     for (ii = arity; ii--; ) {
         if (in[ii] != NULL) {
-            rnum=TPIE_OS_RANDOM();
+            rnum=random();
             mheap->insert(&rnum,ii);
         }
     }
@@ -121,7 +121,7 @@ AMI_err merge_random<T>::operate(CONST T * CONST *in,
     if (!mheap->sizeofheap()) {
 
 #if DEBUG_ASSERTIONS
-        TPIE_OS_SIZE_T ii;
+        memory_size_type ii;
         
         for (ii = input_arity; ii--; ) {
             tp_assert(in[ii] == NULL, "Empty queue but more input.");
@@ -135,7 +135,7 @@ AMI_err merge_random<T>::operate(CONST T * CONST *in,
         return AMI_MERGE_DONE;
 
     } else {
-        TPIE_OS_SIZE_T min_source;
+        memory_size_type min_source;
         int min;
 
         mheap->extract_min(min,min_source);
@@ -146,7 +146,7 @@ AMI_err merge_random<T>::operate(CONST T * CONST *in,
 
         if (in[min_source] != NULL) {
             *out = *(in[min_source]);
-            min=TPIE_OS_RANDOM();
+            min=random();
             mheap->insert(&min,min_source);
             taken_index = min_source;
             return AMI_MERGE_OUTPUT;
@@ -164,14 +164,14 @@ AMI_err merge_random<T>::operate(CONST T * CONST *in,
 
 template<class T>
 AMI_err merge_random<T>::main_mem_operate(T* mm_stream,
-                                          TPIE_OS_SIZE_T len)
+                                          memory_size_type len)
 {
-    TPIE_OS_SIZE_T ii;
+    memory_size_type ii;
     T temp;
-    TPIE_OS_SIZE_T rand_index;
+    memory_size_type rand_index;
     
     for (ii = 0; ii < len - 1; ii++) {
-        rand_index = ii + (TPIE_OS_RANDOM() % (len - ii));
+        rand_index = ii + (random() % (len - ii));
         temp = mm_stream[ii];
         mm_stream[ii] = mm_stream[rand_index];
         mm_stream[rand_index] = temp;
@@ -180,7 +180,7 @@ AMI_err merge_random<T>::main_mem_operate(T* mm_stream,
 }
 
 template<class T>
-TPIE_OS_SIZE_T merge_random<T>::space_usage_overhead(void)
+memory_size_type merge_random<T>::space_usage_overhead(void)
 {
     return sizeof(*this);
 }
@@ -188,7 +188,7 @@ TPIE_OS_SIZE_T merge_random<T>::space_usage_overhead(void)
 template<class T>
 size_t merge_random<T>::space_usage_per_stream(void)
 {
-    return sizeof(int) + sizeof(TPIE_OS_SIZE_T);
+    return sizeof(int) + sizeof(memory_size_type);
 }
 
 #endif // _MERGE_RANDOM_H 

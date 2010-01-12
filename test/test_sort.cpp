@@ -56,10 +56,10 @@ enum test_type {
 };
 
 const unsigned int APP_OPTION_NUM_OPTIONS=5; 
-const TPIE_OS_LONGLONG APP_MEG = 1024*1024;
-const TPIE_OS_LONGLONG APP_GIG = 1024*1024*1024;
-const TPIE_OS_LONGLONG APP_DEFAULT_N_ITEMS = 10000;
-const TPIE_OS_LONGLONG APP_DEFAULT_MEM_SIZE = 128*1024*1024;
+const stream_size_type APP_MEG = 1024*1024;
+const stream_size_type APP_GIG = 1024*1024*1024;
+const stream_size_type APP_DEFAULT_N_ITEMS = 10000;
+const stream_size_type APP_DEFAULT_MEM_SIZE = 128*1024*1024;
 const int  APP_ITEM_SIZE = 1;
 
 const char* APP_FILE_BASE =  "TPIE_Test";
@@ -69,8 +69,8 @@ const char* APP_FILE_BASE =  "TPIE_Test";
 typedef struct app_info{
     const char * path;
     int item_size;
-    TPIE_OS_OFFSET num_items;
-    TPIE_OS_SIZE_T mem_size;
+    stream_offset_type num_items;
+    memory_size_type mem_size;
 } appInfo;
 
 // ********************************************************** 
@@ -144,11 +144,11 @@ int qcomp(const void* left, const void* right){
 
 // Just like atoi or atol, but should also work for 64bit numbers
 // Also supports KMG suffixes (e.g. 2K = 2*1024)
-TPIE_OS_OFFSET ascii2longlong(char *s){
+stream_offset_type ascii2longlong(char *s){
 
-  TPIE_OS_SIZE_T i, len, multfactor;
-  TPIE_OS_SSIZE_T digit;
-  TPIE_OS_OFFSET val;
+  memory_size_type i, len, multfactor;
+  memory_offset_type digit;
+  stream_offset_type val;
   bool ok, neg;
   
   len = strlen(s);
@@ -262,16 +262,14 @@ void get_app_info(int argc, char** argv, appInfo & Info){
   char* optarg;
   int optidx, nopts;
   bool optset=false;
-  TPIE_OS_OFFSET tmp;
+  stream_offset_type tmp;
 
   init_opts(opts, argc, argv); 
 
   // get the dir
-  const char* base_dir = getenv("AMI_SINGLE_DEVICE");
-  if (base_dir == NULL) { base_dir = getenv("TMPDIR_ENV"); }
-  if (base_dir == NULL) { base_dir = TMP_DIR; }
-  
-  Info.path=base_dir;
+  std::string base_dir = tempname::get_actual_path();
+
+  Info.path=base_dir.c_str();
   Info.item_size=sizeof(SortItem);
   Info.num_items=APP_DEFAULT_N_ITEMS;
   Info.mem_size=APP_DEFAULT_MEM_SIZE;
@@ -287,12 +285,12 @@ void get_app_info(int argc, char** argv, appInfo & Info){
       Info.path=optarg;
     }
     else if(optidx==APP_OPTION_MEM_SIZE){
-      tmp = static_cast<TPIE_OS_SIZE_T>(ascii2longlong(optarg));
+      tmp = static_cast<memory_size_type>(ascii2longlong(optarg));
       if(tmp < 0){
         std::cerr << "Invalid memory size. Exiting...\n";
         exit(1);
       }
-      else { Info.mem_size=static_cast<TPIE_OS_SIZE_T>(tmp); }
+      else { Info.mem_size=static_cast<memory_size_type>(tmp); }
     }
     else if(!optset){
       //set optset flag if applicable
@@ -351,7 +349,7 @@ void get_app_info(int argc, char** argv, appInfo & Info){
            "Useful for testing basic AMI_sort routine\n\n");
     getopts_usage(argv[0], opts);
     printf("\nEach item is %d bytes\n", APP_ITEM_SIZE);
-    printf("--path-name is \"%s\" by default\n", TMP_DIR);
+    printf("--path-name is \"%s\" by default\n", base_dir.c_str() );
     printf("Suffixes K, M, and G can be appended to the\n"
            "--numitems and --size options to mean\n"
            "*1024, *1024*1024, and *2^30 respectively\n"
@@ -371,7 +369,7 @@ void get_app_info(int argc, char** argv, appInfo & Info){
   fd=TPIE_OS_OPEN_OEXCL(tmpfname, TPIE_OS_FLAG_USE_MAPPING_FALSE);
   if(TPIE_OS_IS_VALID_FILE_DESCRIPTOR(fd)){
     TPIE_OS_CLOSE(fd);
-    TPIE_OS_UNLINK(tmpfname);
+    remove(tmpfname);
   }
   else{
     std::cerr << "Unable to write to path " << Info.path 
@@ -385,7 +383,7 @@ void get_app_info(int argc, char** argv, appInfo & Info){
 
 //converts numbers into strings
 //with appropriate G, M, K suffixes
-char* ll2size(TPIE_OS_LONGLONG n, char* buf){
+char* ll2size(stream_size_type n, char* buf){
   
   const int bufsize = 20;
   double size;
@@ -412,7 +410,7 @@ char* ll2size(TPIE_OS_LONGLONG n, char* buf){
 // Open a stream, write num_items, close stream
 void write_random_stream(std::string fname, appInfo & info, progress_indicator_base* indicator=NULL){
   
-  TPIE_OS_OFFSET i,n,trunc;
+  stream_offset_type i,n,trunc;
   ami::err ae = ami::NO_ERROR;
   i=0;
   n=info.num_items;
@@ -426,7 +424,7 @@ void write_random_stream(std::string fname, appInfo & info, progress_indicator_b
   std::cout << "Opened file " << fname 
        << "\nWriting "<< n << " items..." << std::endl;
   
-  trunc=(static_cast<TPIE_OS_OFFSET>(sizeof (SortItem)))*n;
+  trunc=(static_cast<stream_offset_type>(sizeof (SortItem)))*n;
   if(trunc<0 || trunc>(4*APP_GIG)){
     std::cout << "Initial file length computed as "<< trunc
          << "\nSetting to 4GB "<< std::endl;
@@ -446,7 +444,7 @@ void write_random_stream(std::string fname, appInfo & info, progress_indicator_b
       indicator->init("Items written:");
   }
   while((i<n) && (ae==ami::NO_ERROR)){
-    ae=str->write_item(SortItem(TPIE_OS_RANDOM()));   
+	  ae=str->write_item(SortItem(tpie::random()));   
     i++;
     if (indicator) {
 	indicator->step_percentage();
@@ -470,7 +468,7 @@ void write_random_stream(std::string fname, appInfo & info, progress_indicator_b
 // Read sorted stream from fname and check that its elements are sorted
 void check_sorted(std::string fname, appInfo & info, progress_indicator_base* indicator=NULL){
 
-  TPIE_OS_LONGLONG i,n;
+  stream_size_type i,n;
   SortItem *x, x_prev;
   ami::err ae=ami::NO_ERROR;
    
@@ -525,10 +523,10 @@ void check_sorted(std::string fname, appInfo & info, progress_indicator_base* in
   return;
 }
 
-void load_list(ami::stream<SortItem>* str, SortItem* list, TPIE_OS_SIZE_T nitems){
+void load_list(ami::stream<SortItem>* str, SortItem* list, memory_size_type nitems){
   SortItem *s_item;
   str->seek(0);
-  for(TPIE_OS_SIZE_T i=0; i<nitems; i++){
+  for(memory_size_type i=0; i<nitems; i++){
     str->read_item(&s_item);
     list[i]=*s_item;
   }
@@ -536,8 +534,8 @@ void load_list(ami::stream<SortItem>* str, SortItem* list, TPIE_OS_SIZE_T nitems
 
 // Internal sort tests
 void internal_sort_test(const appInfo& info){  
-  TPIE_OS_SIZE_T str_mem_usage;
-  TPIE_OS_SIZE_T i,nitems;
+  memory_size_type str_mem_usage;
+  memory_size_type i,nitems;
   SortItem *list;
   cpu_timer clk;
   SortCompare cmp;
@@ -552,7 +550,7 @@ void internal_sort_test(const appInfo& info){
   nitems=(MM_manager.memory_available()-str_mem_usage-16)/sizeof(SortItem);
   list=new SortItem[nitems];
   for(i=0; i<nitems; i++){
-    Str->write_item(SortItem(TPIE_OS_RANDOM()));   
+	  Str->write_item(SortItem(tpie::random()));   
   }
   std::cout << "Number items: " << nitems << " size: "
        << ll2size(nitems*sizeof(SortItem),buf) << std::endl;
@@ -671,8 +669,8 @@ ami::err test_3x_sort(appInfo& info, enum test_type ttype, progress_indicator_ba
 
   //delete stream from disk
   std::cout << "\nDeleting streams " << fname << " and " << fname2 << std::endl;
-  TPIE_OS_UNLINK(fname);
-  TPIE_OS_UNLINK(fname2);
+  remove(fname);
+  remove(fname2);
 
   std::cout << "****TEST STOP****\n" << std::endl;
   return ae;
@@ -746,7 +744,7 @@ ami::err test_2x_sort(appInfo& info, enum test_type ttype, progress_indicator_ba
 
   //delete stream from disk
   std::cout << "\nDeleting stream " << fname << std::endl;
-  TPIE_OS_UNLINK(fname);
+  remove(fname);
   std::cout << "****TEST STOP****\n" << std::endl;
   return ae;
 }
@@ -754,7 +752,7 @@ ami::err test_2x_sort(appInfo& info, enum test_type ttype, progress_indicator_ba
 int main(int argc, char** argv){
   appInfo info;
   char buf[20];
-  TPIE_OS_SRANDOM(time(NULL));
+  seed_random(time(NULL));
   get_app_info(argc, argv, info);
 
   //Set up TPIE memory manager
@@ -771,7 +769,7 @@ int main(int argc, char** argv){
   //TP_LOG_SET_THRESHOLD(TPIE_LOG_MEM_DEBUG);
   //printf("Log file is %s\n", tpie_log_name());
 
-  TPIE_OS_LONGLONG filesize = info.num_items*info.item_size;
+  stream_size_type filesize = info.num_items*info.item_size;
   std::cout << "Path:  " << info.path 
        << "\nNum Items: " << info.num_items 
        << "\nItem Size: " << info.item_size

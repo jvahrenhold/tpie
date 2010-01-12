@@ -81,7 +81,7 @@ public:
 
   size_t window_query(const Key& lop, const Key& hip, stream_t* s) { 
     size_t result = 0;
-    for (TPIE_OS_SIZE_T i = 0; i < v_->size(); i++) {
+    for (memory_size_type i = 0; i < v_->size(); i++) {
       if (lop < KeyOfValue()((*v_)[i]) && KeyOfValue()((*v_)[i]) < hip) {
 	if (s != NULL)
 	  s->write_item((*v_)[i]);
@@ -95,7 +95,7 @@ public:
 
   void unload(stream_t* s) {
     assert(s != NULL);
-    for (TPIE_OS_SIZE_T i = 0; i < v_->size(); i++) 
+    for (memory_size_type i = 0; i < v_->size(); i++) 
       s->write_item((*v_)[i]);
   }
 
@@ -112,7 +112,7 @@ public:
   ~d_vector() {
     assert(str_ != NULL);
     if (per_ == PERSIST_PERSISTENT) {
-      for (TPIE_OS_SIZE_T i = 0; i < v_->size(); i++) {
+      for (memory_size_type i = 0; i < v_->size(); i++) {
 	str_->write_item((*v_)[i]);
       }
     }
