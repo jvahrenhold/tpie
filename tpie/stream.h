@@ -1,6 +1,6 @@
-// -*- mode: c++; tab-width: 4; indent-tabs-mode: t; c-file-style: "stroustrup"; -*-
+// -*- mode: c++; tab-width: 4; indent-tabs-mode: t; eval: (progn (c-set-style "stroustrup") (c-set-offset 'innamespace 0)); -*-
 // vi:set ts=4 sts=4 sw=4 noet :
-// Copyright 2008, The TPIE development team
+// Copyright 2010, The TPIE development team
 // 
 // This file is part of TPIE.
 // 
@@ -24,55 +24,43 @@
 #define _TPIE_AMI_STREAM_H
 
 
-
 // Include the configuration header.
 #include <tpie/config.h>
+#include <tpie/persist.h>
+#include <tpie/file_stream.h>
+#include <tpie/stats_stream.h>
 
-// Get definitions for working with Unix and Windows
-#include <tpie/portability.h>
+
+//TODO THESE SHOULD NOT BE HERE
+#include <tpie/tpie_assert.h>
+#include <cstring>
+#include <vector>
 
 // Get the error codes.
 #include <tpie/err.h>
-
-// Get the device description class
-
-// Get an appropriate BTE.  Flags may have been set to determine
-// exactly what BTE implementaion will be used, but that should be of
-// little concern to us.  bte/stream.h and recursively included files
-// will worry about parsing the appropriate flags and getting us an
-// implementation.
-#include <tpie/bte/stream.h>
 
 #include <tpie/tempname.h>
 
 namespace tpie {
 
-    namespace ami {
+namespace ami {
 
 /** AMI stream types passed to constructors */
-	enum stream_type {
-	    READ_STREAM = 1,	// Open existing stream for reading
-	    WRITE_STREAM,		// Open for writing.  Create if non-existent
-	    APPEND_STREAM,		// Open for writing at end.  Create if needed.
-	    READ_WRITE_STREAM	// Open to read and write.
-	};
+enum stream_type {
+	READ_STREAM = 1,	// Open existing stream for reading
+	WRITE_STREAM,		// Open for writing.  Create if non-existent
+	APPEND_STREAM,		// Open for writing at end.  Create if needed.
+	READ_WRITE_STREAM	// Open to read and write.
+};
 	
 /**  AMI stream status. */
-	enum stream_status {
-	    /** Stream is valid */
-	    STREAM_STATUS_VALID = 0,
-	    /** Stream is invalid */
-	    STREAM_STATUS_INVALID
-	};
+enum stream_status {
+	/** Stream is valid */
+	STREAM_STATUS_VALID = 0,
+	/** Stream is invalid */
+	STREAM_STATUS_INVALID
+};
 
-    }  //  ami namespace
-
-}  //  tpie namespace
-
-
-namespace tpie {
-
-    namespace ami {
 
 ////////////////////////////////////////////////////////////////////////////////
 /// A Stream<T> object stores an ordered collection of objects of
@@ -96,9 +84,8 @@ namespace tpie {
 /// \anchor READ_WRITE_STREAM \par READ_WRITE_STREAM:
 /// Both input and output operations are permitted.
 ////////////////////////////////////////////////////////////////////////////////
-template<class T, class bte_t=BTE_STREAM<T> > 
+template<class T> 
 class stream {
-    
 public:
 	typedef T item_type;
     
@@ -117,39 +104,7 @@ public:
     /// Its type is given by st which defaults to \ref READ_WRITE_STREAM.
     ////////////////////////////////////////////////////////////////////////////
     stream(const std::string& path_name, 
-	   stream_type st = READ_WRITE_STREAM);
-    
-    ////////////////////////////////////////////////////////////////////////////
-    // A new stream based on a specific existing BTE stream.  Note
-    // that in this case the BTE stream will not be destroyed when the
-    // destructor for the constructed stream is called.
-    ////////////////////////////////////////////////////////////////////////////
-    stream(bte_t *bs);
-
-
-    ////////////////////////////////////////////////////////////////////////////
-    /// A substream is a TPIE stream that is part of another TPIE stream.
-    /// More precisely, a substream B of a stream A is defined as a
-    /// contiguous range of objects from the ordered collection of objects
-    /// that make up the stream A.  If desired, one can construct
-    /// substreams of substreams of substreams ad infinitum. Since a
-    /// substream is a stream in its own right, many of the stream member
-    /// functions can be applied to a substream. A substream can be
-    /// created via this pseudo-constructor. The reason we do not
-    /// use a real constructor is to get around the fact that
-    /// constructors can not be virtual.
-    /// \param[in] st  specifies the type of the substream
-    /// \param[in] sub_begin offset, that defines the begin of the substream
-    /// within the original stream
-    /// \param[in] sub_end offset, that defines the end of the substream
-    /// within the original stream
-    /// \param[out] sub_stream  upon completion points to the newly created
-    /// substream.
-    ////////////////////////////////////////////////////////////////////////////
-    err new_substream(stream_type     st, 
-		      stream_offset_type  sub_begin, 
-		      stream_offset_type  sub_end,
-		      stream<T,bte_t>       **sub_stream);
+		   stream_type st = READ_WRITE_STREAM);
   
     ////////////////////////////////////////////////////////////////////////////
     /// Destructor that frees the memory buffer and closes the file;
@@ -165,7 +120,7 @@ public:
     /// should be read from or written to an invalid stream.
     ////////////////////////////////////////////////////////////////////////////
     stream_status status() const { 
-	return m_status; 
+		return m_status; 
     }
     
     ////////////////////////////////////////////////////////////////////////////
@@ -173,7 +128,7 @@ public:
     /// \sa status()
     ////////////////////////////////////////////////////////////////////////////
     bool is_valid() const { 
-	return m_status == STREAM_STATUS_VALID; 
+		return m_status == STREAM_STATUS_VALID; 
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -181,7 +136,7 @@ public:
     /// \sa is_valid(), status()
     ////////////////////////////////////////////////////////////////////////////
     bool operator!() const { 
-	return !is_valid(); 
+		return !is_valid(); 
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -226,7 +181,7 @@ public:
     /// Returns the number of items in the stream.
     ////////////////////////////////////////////////////////////////////////////
     stream_offset_type stream_len(void) const { 
-	return m_bteStream->stream_len(); 
+		return str.size();
     }
   
     ////////////////////////////////////////////////////////////////////////////
@@ -244,7 +199,7 @@ public:
     /// beginning of the stream.
     ////////////////////////////////////////////////////////////////////////////
     stream_offset_type tell() const { 
-	return m_bteStream->tell(); 
+		return str.offset();
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -278,27 +233,31 @@ public:
     err main_memory_usage(memory_size_type *usage,
 			  mem::stream_usage usage_type);
 
-
-
 	////////////////////////////////////////////////////////////////////////////
     /// Returns the number of bytes that count streams will maximaly consume
     ////////////////////////////////////////////////////////////////////////////
-	static TPIE_OS_SIZE_T memory_usage(TPIE_OS_SIZE_T count);
+	static memory_size_type memory_usage(memory_size_type count);
   
     ////////////////////////////////////////////////////////////////////////////
     /// Returns a \ref tpie_stats_stream object containing  statistics of 
     /// the stream. 
     ////////////////////////////////////////////////////////////////////////////
-    const stats_stream& stats() const { 
-	return m_bteStream->stats(); 
-    }
+    //const stats_stream& stats() const { 
+	//	return m_bteStream->stats(); 
+    //}
 
     ////////////////////////////////////////////////////////////////////////////
     /// Returns a \ref tpie_stats_stream object containing  statistics of 
     /// the entire tpie system. 
     ////////////////////////////////////////////////////////////////////////////
 	static const stats_stream& gstats() {
-	        return bte::stream_base_generic::gstats();
+		stats_stream x;
+		return x;
+	//	return bte::stream_base_generic::gstats();
+	}
+
+	memory_size_type chunk_size(void) const {
+		return 1024*1024*2/sizeof(T);
 	}
 
     ////////////////////////////////////////////////////////////////////////////
@@ -308,15 +267,7 @@ public:
     /// of streams currently opened by TPIE.
     ////////////////////////////////////////////////////////////////////////////
     int available_streams(void) {
-	return m_bteStream->available_streams();
-    }
-    
-    ////////////////////////////////////////////////////////////////////////////
-    /// Returns the maximum number of items (of type T) 
-    /// that can be stored in one block.
-    ////////////////////////////////////////////////////////////////////////////
-    memory_size_type chunk_size(void) const { 
-	return m_bteStream->chunk_size(); 
+		return 512;
     }
     
     ////////////////////////////////////////////////////////////////////////////
@@ -324,7 +275,7 @@ public:
     /// \ref PERSIST_DELETE or \ref PERSIST_PERSISTENT.}
     ////////////////////////////////////////////////////////////////////////////
     void persist(persistence p) {
-	m_bteStream->persist(p);
+		per = p;
     }
     
     ////////////////////////////////////////////////////////////////////////////
@@ -332,7 +283,7 @@ public:
     /// ensuring it is not deleted when destructed.
     ////////////////////////////////////////////////////////////////////////////
     persistence persist() const { 
-	return m_bteStream->persist(); 
+		return per;
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -342,363 +293,167 @@ public:
 	std::string& sprint();
     
 private:
+	void setup(const std::string & path_name, stream_type st);
 
     /** Restricted copy constructor */
-    stream(const  stream<T,bte_t>& other);
+    stream(const stream<T>& other);
     /** Restricted assignment operator*/
-    stream<T,bte_t>& operator=(const stream<T,bte_t>& other);
-
-    /** Pointer to a base stream, since the particular type of BTE
-     * stream we are using may vary. */
-    bte_t * m_bteStream;
-    
-    /** True if stream is not writable*/
-    bool m_readOnly;
-    
-    /** Non-zero if we should destroy the bte stream when we the
-     * AMI stream is destroyed. */
-    bool m_destructBTEStream;
-
+    stream<T>& operator=(const stream<T>& other);
+	
+	persistence per;
     stream_status m_status;
+	file_stream<T> str;
 };
-
-// Create a temporary AMI stream on one of the devices in the default
-// device description. Persistence is PERSIST_DELETE by default. We
-// are given the index of the string describing the desired device.
-	template<class T, class bte_t>
-	stream<T,bte_t>::stream() : m_bteStream(NULL),
-						 m_readOnly(false),
-						 m_destructBTEStream(true),
-						 m_status(STREAM_STATUS_INVALID)
-	{
-
-	    // Get a unique name.
-		std::string path = tempname::tpie_name("");
-		
-	    TP_LOG_DEBUG_ID("Temporary stream in file: ");
-	    TP_LOG_DEBUG_ID(path);
-    
-	    // Create the BTE stream.
-	    m_bteStream = new bte_t(path, bte::WRITE_STREAM);
-    
-	    // (Short circuit evaluation...)
-	    if (m_bteStream == NULL || 
-		m_bteStream->status() == bte::STREAM_STATUS_INVALID) {
-
-		TP_LOG_FATAL_ID("BTE returned invalid or NULL stream.");
-
-		return;
-	    }
-    
-	    m_bteStream->persist(PERSIST_DELETE);
-    
-	    if (seek(0) != NO_ERROR) {
-
-		TP_LOG_FATAL_ID("seek(0) returned error.");
-
-		return;
-	    }
-
-	    //  Set status to VALID.
-	    m_status = STREAM_STATUS_VALID;
-
-	};
-
-
-// A stream created with this constructor will persist on disk at the
-// location specified by the path name.
-	template<class T, class bte_t>
-	stream<T,bte_t>::stream(const std::string& path_name, stream_type st) :
-	    m_bteStream(NULL),
-	    m_readOnly(false),
-	    m_destructBTEStream(true),
-	    m_status(STREAM_STATUS_INVALID) {
-    
-	    // Decide BTE stream type
-	    bte::stream_type bst;
-
-	    switch (st) {
-	    case READ_STREAM: 
-		bst = bte::READ_STREAM;
-
-		break;
-
-	    case APPEND_STREAM:
-		bst = bte::APPEND_STREAM;
-
-		break;
-
-	    case WRITE_STREAM:
-	    case READ_WRITE_STREAM:
-		bst = bte::WRITE_STREAM; //WRITE_STREAM means both read and
-		//write; this is inconsistent and should be modified..
-
-		break;
-
-	    default:
-
-		TP_LOG_WARNING_ID("Unknown stream type passed to constructor;");
-		TP_LOG_WARNING_ID("Defaulting to READ_WRITE_STREAM.");
-
-		bst = bte::WRITE_STREAM;
-
-		break;
-	    }
-    
-	    m_readOnly          = (st == READ_STREAM);
-	    m_destructBTEStream = true;
-    
-	    // Create the BTE stream.
-	    m_bteStream = new bte_t(path_name, bst);
-	    // (Short circuit evaluation...)
-	    if (m_bteStream == NULL || m_bteStream->status() == bte::STREAM_STATUS_INVALID) {
-
-		TP_LOG_FATAL_ID("BTE returned invalid or NULL stream.");
-
-		return;
-	    }
-    
-	    m_bteStream->persist(PERSIST_PERSISTENT);
-    
-	    // If an APPEND stream, the BTE constructor seeks to its end;
-	    if (st != APPEND_STREAM) {
-		if (seek(0) != NO_ERROR) {
-
-		    TP_LOG_FATAL_ID("seek(0) returned error.");
-
-		    return;
-		}
-	    }
-    
-	    m_status = STREAM_STATUS_VALID;
-	};
-
-
-	template<class T, class bte_t>
-	stream<T,bte_t>::stream(bte_t *bs) :
-	    m_bteStream(bs),
-	    m_readOnly(false),
-	    m_destructBTEStream(false),
-	    m_status(STREAM_STATUS_INVALID) {
-    
-    
-	    if (m_bteStream == NULL || m_bteStream->status() == bte::STREAM_STATUS_INVALID) {
-
-		TP_LOG_FATAL_ID("BTE returned invalid or NULL stream.");
-
-		return;
-	    }
-    
-	    m_readOnly = bs->read_only();
-	    m_status = STREAM_STATUS_VALID;
-	};
-
-	    // *stream::new_substream* //
-	template<class T, class bte_t>
-	err stream<T,bte_t>::new_substream(stream_type     st,
-				     stream_offset_type  sub_begin,
-				     stream_offset_type  sub_end,
-				     stream<T,bte_t>       **sub_stream)
-	{
-	    err retval = NO_ERROR;
-
-	    // Check permissions. Only READ and WRITE are allowed, and only READ is
-	    // allowed if m_readOnly is set.
-	    if ((st != READ_STREAM) && ((st != WRITE_STREAM) || m_readOnly)) {
-
-		*sub_stream = NULL;
-
-		TP_LOG_DEBUG_ID("permission denied");		
-
-		return PERMISSION_DENIED;
-
-	    }
-    
-		typename bte_t::base_t *bte_ss;
-    
-	    if (m_bteStream->new_substream(((st == READ_STREAM) ? bte::READ_STREAM :
-					    bte::WRITE_STREAM),
-					   sub_begin, sub_end,
-					   &bte_ss) != bte::NO_ERROR) {
-
-		*sub_stream = NULL;
-
-		TP_LOG_DEBUG_ID("new_substream failed");		
-
-		return BTE_ERROR;
-	    }
-    
-	    stream<T,bte_t> *ami_ss;
-    
-	    // This is a potentially dangerous downcast.  It is being done for
-	    // the sake of efficiency, so that calls to the BTE can be
-	    // inlined.  If multiple implementations of BTE streams are
-	    // present it could be very dangerous.
-    
-	    ami_ss = new stream<T,bte_t>(static_cast<bte_t*>(bte_ss));
-    
-	    ami_ss->m_destructBTEStream = true;
-
-	    retval = ami_ss->seek(0);
-	    assert(retval == NO_ERROR); // sanity check
-    
-	    *sub_stream = ami_ss;
-    
-	    return retval;
-	}
-
-
-	template<class T, class bte_t>
-	std::string stream<T,bte_t>::name() const {
-	    return m_bteStream->name();
-	}
-
-// Move to a specific offset.
-	template<class T, class bte_t>
-	err stream<T,bte_t>::seek(stream_offset_type offset) {
-
-	    if (m_bteStream->seek(offset) != bte::NO_ERROR) {
-
-		TP_LOG_WARNING_ID("bte error");		
-
-		return BTE_ERROR;
-	    }
-    
-	    return NO_ERROR;
-	}
-
-// Truncate
-	template<class T, class bte_t>
-	err stream<T,bte_t>::truncate(stream_offset_type offset) {
-
-	    if (m_bteStream->truncate(offset) != bte::NO_ERROR) {
-
-		TP_LOG_WARNING_ID("bte error");
-
-		return BTE_ERROR;
-	    }
-    
-	    return NO_ERROR;
-	}
-
-
-template<class T, class bte_t>
-TPIE_OS_SIZE_T stream<T,bte_t>::memory_usage(TPIE_OS_SIZE_T count) {
-	return bte_t::memory_usage(count) + sizeof(stream<T,bte_t>)*count;
-}
 	
 
+template<class T>
+stream<T>::stream() {
+	per = PERSIST_DELETE;
+	setup(tempname::tpie_name(""), READ_WRITE_STREAM);
+};
+
+
+template<class T>
+stream<T>::stream(const std::string& path_name, stream_type st) {
+	per = PERSIST_PERSISTENT;
+	setup(path_name, st);
+}
+
+template<class T>
+void stream<T>::setup(const std::string & path_name, stream_type st) {
+	file_base::access_type at;
+	switch (st) {
+	case READ_STREAM: 
+		at = file_base::read;
+		break;
+	case WRITE_STREAM:
+	case APPEND_STREAM:	
+		at = file_base::write;
+		break;
+	case READ_WRITE_STREAM:
+	default:
+		at = file_base::read_write;
+		break;
+	}
+	
+	m_status = STREAM_STATUS_INVALID;
+	try {
+		str.open(path_name, at);
+		if (st==APPEND_STREAM) str.seek( str.size() );
+	    m_status = STREAM_STATUS_VALID;
+	} catch(stream_exception & e) {
+		TP_LOG_FATAL_ID(e.what());
+	}
+}
+
+template<class T>
+std::string stream<T>::name() const {
+	return str.path();
+}
+
+template<class T>
+err stream<T>::seek(stream_offset_type offset) {
+	try {
+		str.seek(offset);
+	} catch(stream_exception & e) {
+		TP_LOG_WARNING_ID(e.what());		
+		return BTE_ERROR;
+	}
+	return NO_ERROR;
+}
+
+template<class T>
+err stream<T>::truncate(stream_offset_type offset) {
+	return BTE_ERROR;
+}
+
+template<class T>
+memory_size_type stream<T>::memory_usage(memory_size_type count) {
+	return 1234;
+	//return bte_t::memory_usage(count) + sizeof(stream<T,bte_t>)*count;
+}
+
 // Query memory usage
-	template<class T, class bte_t>
-	err stream<T,bte_t>::main_memory_usage(memory_size_type *usage,
-					 mem::stream_usage usage_type) {
+template<class T>
+err stream<T>::main_memory_usage(memory_size_type *usage,
+									   mem::stream_usage usage_type) {
+	*usage = memory_usage(1);
+	return NO_ERROR;
+}
 
-	    if (m_bteStream->main_memory_usage(usage, usage_type) != bte::NO_ERROR) {
+template<class T>
+stream<T>::~stream() {
+	if (!per) remove(str.path());
+}
 
-		TP_LOG_WARNING_ID("bte error");		
-
+template<class T>
+err stream<T>::read_item(T **elt) {
+	try {
+		*elt = &str.read();
+	} catch(end_of_stream_exception & e) {
+		TP_LOG_DEBUG_ID("eos in read_item");
+		return END_OF_STREAM;
+	} catch(stream_exception & e) {
+		TP_LOG_DEBUG_ID(e.what());
 		return BTE_ERROR;
-	    }
-    
-	    switch (usage_type) {
-	    case mem::STREAM_USAGE_OVERHEAD:
-	    case mem::STREAM_USAGE_CURRENT:
-	    case mem::STREAM_USAGE_MAXIMUM:
-	    case mem::STREAM_USAGE_SUBSTREAM:
-		*usage += sizeof(*this);
-
-		break;
-
-	    case mem::STREAM_USAGE_BUFFER:
-
-		break;
-
-	    default:
-
-		tp_assert(0, "Unknown MM_stream_usage type added.");
-
-	    }
-    
-	    return NO_ERROR;
 	}
+	return NO_ERROR;
+}
 
-	template<class T, class bte_t>
-	stream<T,bte_t>::~stream() {
-	    if (m_destructBTEStream) {
-		delete m_bteStream;
-	    }
-	}
-
-	template<class T, class bte_t>
-	err stream<T,bte_t>::read_item(T **elt) {
-		switch(m_bteStream->read_item(elt)) {
-			case bte::NO_ERROR:
-				return NO_ERROR;
-			case bte::END_OF_STREAM:
-				TP_LOG_DEBUG_ID("eos in read_item");
-				return END_OF_STREAM;
-			default:
-				TP_LOG_DEBUG_ID("bte error in read_item");
-				return BTE_ERROR;
-		}
-	}
-
-	template<class T, class bte_t>
-	err stream<T,bte_t>::write_item(const T &elt) {
-
-	    if (m_bteStream->write_item(elt) != bte::NO_ERROR) {
-
-		TP_LOG_WARNING_ID("bte error");
-
+template<class T>
+err stream<T>::write_item(const T &elt) {
+	try {
+		str.write(elt);
+	} catch(stream_exception & e) {
+		TP_LOG_WARNING_ID(e.what());
 		return BTE_ERROR;
-
-	    }
-
-	    return NO_ERROR;
 	}
+	return NO_ERROR;
+}
 
+template<class T>
+err stream<T>::read_array(T *mm_space, stream_offset_type *len) {
+	memory_size_type l=*len;
+	err e = read_array(mm_space, l);
+	*len = l;
+	return e;
+}
 
-	template<class T, class bte_t>
-	err stream<T,bte_t>::read_array(T *mm_space, stream_offset_type *len) {
-		memory_size_type l=*len;
-		err e = read_array(mm_space, l);
-		*len = l;
-		return e;
+template<class T>
+err stream<T>::read_array(T *mm_space, memory_size_type & len) {
+	try {
+		str.read(mm_space, mm_space+len);
+	} catch(end_of_stream_exception & e) {
+		TP_LOG_DEBUG_ID("eos in read_item");
+		return END_OF_STREAM;
+	} catch(stream_exception & e) {
+		TP_LOG_DEBUG_ID(e.what());
+		return BTE_ERROR;
 	}
+	return NO_ERROR;
+}
 
-	template<class T, class bte_t>
-	err stream<T,bte_t>::read_array(T *mm_space, memory_size_type & len) {
-	    bte::err bte_err = m_bteStream->read_array(mm_space, len);
-		switch(bte_err) {
-	    case bte::NO_ERROR:	return NO_ERROR;
-		case bte::END_OF_STREAM: return END_OF_STREAM;
-		default: return BTE_ERROR;
-		}
+template<class T>
+err stream<T>::write_array(const T *mm_space, memory_size_type len) {
+	try {
+		str.write(mm_space, mm_space+len);
+	} catch(stream_exception & e) {
+		TP_LOG_DEBUG_ID(e.what());
+		return BTE_ERROR;
 	}
+	return NO_ERROR;
+}
 
-	template<class T, class bte_t>
-	err stream<T,bte_t>::write_array(const T *mm_space, memory_size_type len) {
-		bte::err bte_err = m_bteStream->write_array(mm_space,len);
-		switch(bte_err) {
-	    case bte::NO_ERROR:	return NO_ERROR;
-		case bte::END_OF_STREAM: return END_OF_STREAM;
-		default: return BTE_ERROR;
-		}
-	}
+template<class T>
+std::string& stream<T>::sprint() {
+	static std::string buf;
+	std::stringstream ss;
+	ss << "STREAM " << name() <<  " " << static_cast<long>(stream_len());
+	ss >> buf;
+	return buf;
+}
 
-	template<class T, class bte_t>
-	std::string& stream<T,bte_t>::sprint() {
-	    static std::string buf;
-		std::stringstream ss;
-		ss << "STREAM " << name() <<  " " << static_cast<long>(stream_len());
-		ss >> buf;
-	    return buf;
-	}
-
-    }  //  ami namespace
-
+}  //  ami namespace
 }  //  tpie namespace
-
 #include <tpie/stream_compatibility.h>
-
 #endif // _TPIE_AMI_STREAM_H
