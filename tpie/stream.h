@@ -364,13 +364,18 @@ err stream<T>::seek(stream_offset_type offset) {
 
 template<class T>
 err stream<T>::truncate(stream_offset_type offset) {
-	return BTE_ERROR;
+	try {
+		str.truncate(offset);
+	} catch(stream_exception & e) {
+		TP_LOG_WARNING_ID(e.what());		
+		return BTE_ERROR;
+	}
+	return NO_ERROR;
 }
 
 template<class T>
 memory_size_type stream<T>::memory_usage(memory_size_type count) {
-	return 1234;
-	//return bte_t::memory_usage(count) + sizeof(stream<T,bte_t>)*count;
+	return file_stream<T>::memory_usage(1, 1.0, true) + sizeof(stream<T>)*count;
 }
 
 // Query memory usage
