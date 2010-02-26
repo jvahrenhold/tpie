@@ -20,44 +20,8 @@
 #ifndef _TPIE_STREAMING_H
 #define _TPIE_STREAMING_H
 
-#include <tpie/stream.h>
-namespace tpie {
-	
-	template <class stream_t, class dest_t> 
-	class stream_source {
-	private:
-		stream_t * stream;
-		dest_t & dest;
-	public:
-		stream_source(stream_t * s, dest_t & d): stream(s), dest(d) {};
-		inline void run() {
-			typename stream_t::item_type * item;
-			dest.begin(stream->stream_len());
-			while(stream->read_item(&item) != ami::END_OF_STREAM) 
-				dest.push(*item);
-			dest.end();
-		};
-	};
-
-	template <class s_t> 
-	class stream_sink {
-	private:
-		s_t * stream;
-	public:
-		typedef typename s_t::item_type item_type;
-
-		inline stream_sink(s_t * s): stream(s) {}
-		inline void begin(stream_offset_type size=0) {}
-		inline void push(const item_type & item) {
-			stream->write_item(item);
-		}
-		inline void end() {}
-	};
-	
-}
-
 #include <tpie/streaming/stream.h>
 #include <tpie/streaming/buffer.h>
 #include <tpie/streaming/util.h>
-#include <tpie/streaming/sort.h>
+//#include <tpie/streaming/sort.h>
 #endif //_TPIE_STREAMING_H
