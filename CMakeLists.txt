@@ -37,7 +37,7 @@ else(WIN32)
 endif(WIN32)
 
 
-find_package(Boost 1.37.0 REQUIRED filesystem)
+find_package(Boost 1.37.0 REQUIRED filesystem system)
 include_directories(${Boost_INCLUDE_DIRS})
 
 set(INSTALL_TARGETS_DEFAULT_ARGS
