@@ -1,6 +1,8 @@
 #ifndef _CONFIG_H
 #define _CONFIG_H
 
+#cmakedefine TPIE_USE_CPP_0X
+
 #cmakedefine TPIE_HAVE_UNISTD_H
 #cmakedefine TPIE_HAVE_SYS_UNISTD_H
 

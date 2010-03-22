@@ -19,9 +19,27 @@
 
 #ifndef __TPIE_UTIL_H__
 #define __TPIE_UTIL_H__
-
+#include <tpie/config.h>
 #include <tpie/types.h>
 namespace tpie {
+
+#ifdef TPIE_USE_CPP_0X
+template <int i, typename ...rest>
+struct ith_type {};
+
+template <int i, typename TT, typename ...rest>
+struct ith_type<i, TT, rest...> {
+  typedef typename ith_type<i-1,rest...>::T T;
+};
+
+template <typename TT, typename ...rest>
+struct ith_type<0, TT, rest...> {
+  typedef TT T;
+};
+#endif //TPIE_USE_CPP_0X
+
+template <typename T>
+T & nullref() {return *((T*)0);}
 
 ///////////////////////////////////////////////////////////////////////////
 /// \brief Ignore an unused variable warning

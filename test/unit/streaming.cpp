@@ -23,6 +23,10 @@
 #include <tpie/streaming.h>
 #include <tpie/streaming/concepts.h>
 
+#ifdef TPIE_USE_CPP_0X
+#include <tpie/streaming/merger.h>
+#endif //TPIE_USE_CPP_0X
+
 using namespace tpie;
 using namespace std;
 using namespace tpie::streaming;
@@ -585,6 +589,67 @@ void test_virtual(char * testName) {
 		ERR("No such test");
 }
 
+#ifdef TPIE_USE_CPP_0X
+struct ke {
+	inline double operator()(const double & a) const {
+		return a;
+	}
+	
+	inline double operator()(const int a) const {
+		return a;
+	};
+
+	inline double operator()(const char a) const {
+		return a;
+	};
+};
+
+template <typename T, int a, int b>
+struct test_source {
+	typedef T pull_type; 
+	int i;
+	void pull_begin() {i=0;}
+	void pull_end() {}
+	bool can_pull() const {
+		return i < 2;
+	}
+	T pull() {
+		return (i==0)?a:b;
+	}
+};
+
+template <typename source_t>
+struct test_puller {
+	source_t & source;
+	
+	void run() {
+	}
+};
+#endif
+
+void test_pull_merger(char * testName) {
+#ifdef TPIE_USE_CPP_0X
+	typedef test_source<int, 1, 4> a_t;
+	typedef	test_source<double, 2, 5> b_t;
+	typedef	test_source<char, 3, 6> c_t;
+	typedef pull_merger<std::less<double>, ke, a_t, b_t, c_t> pm_t;
+	
+	a_t a;
+	b_t b;
+	c_t c;
+	pm_t source(std::less<double>(), 
+				ke(), a, b, c);
+
+	source.pull_begin();
+	while(source.can_pull()) {
+		merger_item<int, double, char> i = source.pull();
+	}
+	source.pull_end();
+	
+
+#endif
+}
+
 int main(int argc, char ** argv) {
 	MM_manager.set_memory_limit(128*1024*1024);
 	blockFactor=file_base::calculate_block_factor(32*sizeof(int));
@@ -604,6 +669,8 @@ int main(int argc, char ** argv) {
 		test_pull_buffer(argv[2]);
 	else if (!strcmp(argv[1], "virtual")) 
 		test_virtual(argv[2]);
+	else if (!strcmp(argv[1], "pull_merger")) 
+		test_pull_merger(argv[2]);
 	else
 		ERR("no such test");
 	return 0;

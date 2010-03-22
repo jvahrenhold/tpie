@@ -57,12 +57,15 @@ option(COMPILE_TEST "Compile test programs" ON)
 option(TPIE_USE_EXCEPTIONS "Throw exceptions on certain errors." ON)
 option(DEBUG_ASSERTIONS "Enable tpie_assert." OFF)
 option(TPL_LOGGING "Enable tpie logging." ON)
-
+option(TPIE_USE_CPP_0X "Use c++0x features." OFF)
 option(PROFILING "Use profiling." OFF)
 if (PROFILING) 
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
-endif(PROFILING) 
+endif (PROFILING) 
 
+if (TPIE_USE_CPP_0X) 
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+endif (TPIE_USE_CPP_0X)
 
 if (COMPILE_TEST)
 	ENABLE_TESTING()
