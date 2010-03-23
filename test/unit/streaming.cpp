@@ -614,7 +614,7 @@ struct test_source {
 		return i < 2;
 	}
 	T pull() {
-		return (i==0)?a:b;
+		return (i++==0)?a:b;
 	}
 };
 
@@ -632,6 +632,7 @@ void test_pull_merger(char * testName) {
 	typedef test_source<int, 1, 4> a_t;
 	typedef	test_source<double, 2, 5> b_t;
 	typedef	test_source<char, 3, 6> c_t;
+	
 	typedef pull_merger<std::less<double>, ke, a_t, b_t, c_t> pm_t;
 	
 	a_t a;
@@ -641,12 +642,21 @@ void test_pull_merger(char * testName) {
 				ke(), a, b, c);
 
 	source.pull_begin();
-	while(source.can_pull()) {
-		merger_item<int, double, char> i = source.pull();
-	}
-	source.pull_end();
-	
 
+	assert(source.can_pull());
+	assert(source.pull().get<0>() == 1);
+	assert(source.can_pull());
+	assert(source.pull().get<1>() == 2.0);
+	assert(source.can_pull());
+	assert(source.pull().get<2>() == 3);
+	assert(source.can_pull());
+	assert(source.pull().get<0>() == 4);
+	assert(source.can_pull());
+	assert(source.pull().get<1>() == 5.0);
+	assert(source.can_pull());
+	assert(source.pull().get<2>() == 6);
+	assert(!source.can_pull());
+	source.pull_end();
 #endif
 }
 

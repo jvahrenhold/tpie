@@ -83,24 +83,26 @@ public:
 	public:
 		key_t key;
 		comp_t comp;
+		mcomp_t(const comp_t & c, const key_t & k): comp(c), key(k) {}
 		inline bool operator()(const item_type & a, const item_type & b) const {
 			return comp(ke_t::f(key, a), ke_t::f(key, b));
 		}
 	};
 	
 	mcomp_t comp;
-	
+	multitype_pq(const comp_t & c, const key_t & k): count(0), comp(c, k) {}
+
 	inline void bubbleDown() {
 		int i=0;
 		while ((i+1)*2 < count) {
 			if(comp(items[(i+1)*2-1], items[(i+1)*2])) {
-				if (!comp(items[i], items[(i+1)*2])) break;
-				std::swap(items[i], items[(i+1)*2]);
-				i = (i+1)*2;
-			} else {
-				if (!comp(items[i], items[(i+1)*2-1])) break;
+				if (!comp(items[(i+1)*2-1], items[i])) break;
 				std::swap(items[i], items[(i+1)*2-1]);
 				i = (i+1)*2-1;
+			} else {
+				if (!comp(items[(i+1)*2], items[i])) break;
+				std::swap(items[i], items[(i+1)*2]);
+				i = (i+1)*2;
 			}
 		}
 		if ((i+1)*2 == count && comp(items[(i+1)*2-1], items[i]))
@@ -139,12 +141,12 @@ public:
 		return count == 0;
 	}
 	
-// 	void dump() {
-// 		std::cout << "PQ "; 
-// 		for(int i=0; i < count; ++i) 
-// 			std::cout << ke_t::f(key_t(), items[i]) << " ";
-// 		std::cout << std::endl;
-// 	}
+//  	void dump() {
+//  		std::cout << "PQ "; 
+//  		for(int i=0; i < count; ++i) 
+//  			std::cout << ke_t::f(key_t(), items[i]) << " ";
+//  		std::cout << std::endl;
+//  	}
 };
 
 template <typename T>
@@ -175,9 +177,13 @@ template <typename pq_t, int i, typename pull_t, typename ...pulls_t>
 struct pull_container<pq_t, i, pull_t, pulls_t...> {
 	pull_t & pull;
 	pull_container<pq_t, i+1, pulls_t...> tail;
+	typedef typename pull_t::pull_type pull_type;
 	typedef typename pq_t::item_type item_type;
 	inline pull_container(pull_t & p, pulls_t &... pulls): pull(p), tail(pulls...) {};
-	
+
+	pull_type in;
+	pull_type out;
+
 
 	inline void pull_begin() {
 		pull.pull_begin();
@@ -192,31 +198,39 @@ struct pull_container<pq_t, i, pull_t, pulls_t...> {
 	inline void initial_fill(pq_t & pq) {
 		item_type item;
 		if (pull.can_pull()) {
-			item.set<i>(pull.pull());
+			in = pull.pull();
+			item.template set<i>(in);
 			pq.insert(item);
 		}
 		tail.initial_fill(pq);
 	}
-	
-	inline void insert_next(pq_t & pq, item_type & cur) {
-		if (cur.stream() == i) {
-			if (pull.can_pull()) {
-				item_type item;
-				item.set<i>(pull.pull());
-				pq.deleteMinAndInsert(item);
-			} else
-				pq.deleteMin();
+
+	inline item_type insert_next(pq_t & pq, item_type & cur) {
+		if (cur.stream() != i)
+			return tail.insert_next(pq, cur); 
+		out = in;
+		if (pull.can_pull()) {
+			item_type item;
+			in = pull.pull();
+			item.template set<i>(in);
+			pq.deleteMinAndInsert(item);
 		} else
-			tail.insert_next(pq, cur); 
+			pq.deleteMin();
+		item_type r;
+		r.template set<i>(out);
+		return r;
 	}
 };
 
 template <typename pq_t,int i>
 struct pull_container<pq_t, i> {
+	typedef typename pq_t::item_type item_type;
+
 	inline pull_container() {}
 	inline void pull_begin() {}
 	inline void pull_end() {}
 	inline void initial_fill(pq_t & pq) {}
+	inline item_type insert_next(pq_t & pq, item_type & cur) {}
 };
 
 template <typename comp_t,
@@ -231,8 +245,7 @@ public:
 	typedef typename pq_t::item_type pull_type;
 
 	pull_merger(const comp_t & comp, const key_t & key, 
-				pulls_t &... pulls): pq(comp, key), 
-									 c(pulls...) {};
+				pulls_t &... pulls): pq(comp, key), c(pulls...) {};
 	
 	void pull_begin() {
 		c.pull_begin();
@@ -245,11 +258,11 @@ public:
 
 	pull_type pull() {
 		pull_type item = pq.min();
-		c.insert_next(pq, item);
+		return c.insert_next(pq, item);
 	}
 
 	bool can_pull() const {
-		return !c.empty();
+		return !pq.empty();
 	}
 };
 
