@@ -21,6 +21,13 @@ endif(WIN32)
 
 set(TEMP_DIR ${__TEMP_DIR} CACHE STRING "The default path for storing temporary files")
 
+set(Boost_USE_STATIC_LIBS   ON)
+set(Boost_USE_MULTITHREADED ON)
+find_package( Boost 1.42.0 COMPONENTS date_time)
+
+include_directories(${Boost_INCLUDE_DIRS})
+#target_link_libraries(foo ${Boost_LIBRARIES})
+
 
 
 check_include_files("unistd.h" TPIE_HAVE_UNISTD_H)

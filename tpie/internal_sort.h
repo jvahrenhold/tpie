@@ -33,6 +33,8 @@
 
 #include <algorithm>
 #include <tpie/comparator.h> //to convert TPIE comparisons to STL
+#include <boost/date_time/posix_time/posix_time.hpp>
+
 
 namespace tpie {
 namespace ami {
@@ -215,7 +217,7 @@ namespace ami {
   ///////////////////////////////////////////////////////////////////////////
 	template<class T>
 	err Internal_Sorter_Op<T>::sort(stream<T>* InStr, stream<T>* OutStr, TPIE_OS_SIZE_T nItems){
-	    
+		boost::posix_time::ptime a(boost::posix_time::microsec_clock::local_time());
 	    err ae  = NO_ERROR;
 	    T    *next_item;
 	    TPIE_OS_SIZE_T i = 0;
@@ -240,10 +242,12 @@ namespace ami {
 	    }
 
 	    //Sort the array.
+		boost::posix_time::ptime b(boost::posix_time::microsec_clock::local_time());
 	    TP_LOG_DEBUG_ID("calling STL sort for " << static_cast<TPIE_OS_OUTPUT_SIZE_T>(nItems) << " items");
 	    std::sort(ItemArray, ItemArray+nItems);
 	    TP_LOG_DEBUG("calling quick_sort_op for " << static_cast<TPIE_OS_OUTPUT_SIZE_T>(nItems) << " items\n");
 	    
+		boost::posix_time::ptime c(boost::posix_time::microsec_clock::local_time());
 	    if(InStr==OutStr){ //Do the right thing if we are doing 2x sort
 		//Internal sort objects should probably be re-written so that
 		//the interface is cleaner and they don't have to worry about I/O
@@ -260,7 +264,11 @@ namespace ami {
 		    return ae;
 		}
 	    }
-	    
+		boost::posix_time::ptime d(boost::posix_time::microsec_clock::local_time());
+		std::cout << "Run read: " << boost::posix_time::to_simple_string(b - a) << std::endl;
+		std::cout << "Run sort: " << boost::posix_time::to_simple_string(c - b) << std::endl;
+		std::cout << "Run write: " << boost::posix_time::to_simple_string(d - c) << std::endl;
+
 	    return NO_ERROR;
 	}
 
@@ -306,7 +314,7 @@ namespace ami {
   ///////////////////////////////////////////////////////////////////////////
 	template<class T, class CMPR>
 	err Internal_Sorter_Obj<T, CMPR>::sort(stream<T>* InStr, stream<T>* OutStr, TPIE_OS_SIZE_T nItems) {
-	    
+		boost::posix_time::ptime a(boost::posix_time::microsec_clock::local_time());	    
 	    err ae = NO_ERROR;
 	    T    *next_item;
 	    TPIE_OS_SIZE_T i = 0;
@@ -330,11 +338,14 @@ namespace ami {
 		ItemArray[i] = *next_item;
 	    }
 
+		boost::posix_time::ptime b(boost::posix_time::microsec_clock::local_time());
 	    //Sort the array.
 	    TP_LOG_DEBUG_ID("calling STL sort for " << static_cast<TPIE_OS_OUTPUT_SIZE_T>(nItems) << " items");
 	    TP_LOG_DEBUG("converting TPIE comparison object to STL\n");
 	    std::sort(ItemArray, ItemArray+nItems, TPIE2STL_cmp<T,CMPR>(cmp_o));
 	    
+		boost::posix_time::ptime c(boost::posix_time::microsec_clock::local_time());
+
 	    if (InStr==OutStr) { //Do the right thing if we are doing 2x sort
 		//Internal sort objects should probably be re-written so that
 		//the interface is cleaner and they don't have to worry about I/O
@@ -351,7 +362,11 @@ namespace ami {
 		    return ae;
 		}		
 	    }
-	    
+		boost::posix_time::ptime d(boost::posix_time::microsec_clock::local_time());
+		std::cout << "Run read: " << boost::posix_time::to_simple_string(b - a) << std::endl;
+		std::cout << "Run sort: " << boost::posix_time::to_simple_string(c - b) << std::endl;
+		std::cout << "Run write: " << boost::posix_time::to_simple_string(d - c) << std::endl;
+
 	    return NO_ERROR;
 	}
 	
