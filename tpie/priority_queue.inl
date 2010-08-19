@@ -56,7 +56,9 @@ void priority_queue<T, Comparator, OPQType>::init(TPIE_OS_SIZE_T mm_avail) { // 
 		const TPIE_OS_SIZE_T fanout_overhead = 2*sizeof(TPIE_OS_OFFSET)// group state
 			+ (usage+sizeof(stream<T>*)+alloc_overhead) //temporary streams
 			+ (sizeof(T)+sizeof(TPIE_OS_OFFSET)); //mergeheap
+		fanout_overhead = fanout_overhead*8 + 1; // Bitvector usage
 		const TPIE_OS_SIZE_T sq_fanout_overhead = 3*sizeof(TPIE_OS_OFFSET); //slot_state
+		sq_fanout_overhead = 8*sq_fanout_overhead + 1; // Bitvector usage
 		const TPIE_OS_SIZE_T heap_m_overhead = sizeof(T) //opg
 			+ sizeof(T) //gbuffer0
 			+ sizeof(T) //extra buffer for remove_group_buffer
@@ -82,7 +84,7 @@ void priority_queue<T, Comparator, OPQType>::init(TPIE_OS_SIZE_T mm_avail) { // 
 			//some of these numbers get big which is the reason for all this
 			//careful casting.
 			TPIE_OS_OFFSET squared_tmp = static_cast<TPIE_OS_OFFSET>(fanout_overhead)*static_cast<TPIE_OS_OFFSET>(fanout_overhead); 
-			squared_tmp += static_cast<TPIE_OS_OFFSET>(4*sq_fanout_overhead)*static_cast<TPIE_OS_OFFSET>(setting_k);
+			squared_tmp += static_cast<TPIE_OS_OFFSET>(4*sq_fanout_overhead)*(8*static_cast<TPIE_OS_OFFSET>(setting_k));
 			long double dsquared_tmp = static_cast<long double>(squared_tmp);
 			const TPIE_OS_SIZE_T root_discriminant = static_cast<TPIE_OS_SIZE_T>(std::floor(std::sqrt(dsquared_tmp)));
 
@@ -91,7 +93,8 @@ void priority_queue<T, Comparator, OPQType>::init(TPIE_OS_SIZE_T mm_avail) { // 
 			setting_k = static_cast<TPIE_OS_SIZE_T>(nominator/denominator); //Set fanout
 		}
 
-		mm_avail-=setting_k*heap_m_overhead+setting_k*setting_k*sq_fanout_overhead;
+		mm_avail-=setting_k*heap_m_overhead
+			+ static_cast<TPIE_OS_SIZE_T>((static_cast<TPIE_OS_OFFSET>(setting_k*setting_k)*static_cast<TPIE_OS_OFFSET>(sq_fanout_overhead)+7)/8);
 		setting_m = (mm_avail)/heap_m_overhead;
 
 		//Check that minimum requirements on fanout and buffersizes are met
@@ -104,6 +107,8 @@ void priority_queue<T, Comparator, OPQType>::init(TPIE_OS_SIZE_T mm_avail) { // 
 		}
 
 	}
+	group_opened.assign(setting_k, false);
+	slot_opened.assign(setting_k*setting_k, false);
 
 	current_r = 0;
 	m_size = 0; // total size of priority queue
@@ -161,10 +166,12 @@ void priority_queue<T, Comparator, OPQType>::init(TPIE_OS_SIZE_T mm_avail) { // 
 template <typename T, typename Comparator, typename OPQType>
 priority_queue<T, Comparator, OPQType>::~priority_queue() { // destructor
 	for(TPIE_OS_SIZE_T i = 0; i < setting_k*setting_k; i++) { // unlink slots
-		TPIE_OS_UNLINK(slot_data(i));
+		if(slot_opened[i])
+			TPIE_OS_UNLINK(slot_data(i));
 	}
 	for(TPIE_OS_SIZE_T i = 0; i < setting_k; i++) { // unlink groups 
-		TPIE_OS_UNLINK(group_data(i));
+		if(group_opened[i])
+			TPIE_OS_UNLINK(group_data(i));
 	}
 
 	delete opq;
@@ -1036,6 +1043,7 @@ const std::string& priority_queue<T, Comparator, OPQType>::datafile_group(TPIE_O
 
 template <typename T, typename Comparator, typename OPQType>
 const std::string& priority_queue<T, Comparator, OPQType>::slot_data(TPIE_OS_SIZE_T slotid) {
+	slot_opened[slotid] = true;
 	return datafile(slot_state[slotid*3+2]);
 }
 
@@ -1046,6 +1054,7 @@ void priority_queue<T, Comparator, OPQType>::slot_data_set(TPIE_OS_SIZE_T slotid
 
 template <typename T, typename Comparator, typename OPQType>
 const std::string& priority_queue<T, Comparator, OPQType>::group_data(TPIE_OS_SIZE_T groupid) {
+	group_opened[groupid] = true;
 	return datafile_group(groupid);
 }
 

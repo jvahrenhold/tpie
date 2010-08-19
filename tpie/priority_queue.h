@@ -163,6 +163,8 @@ private:
     TPIE_OS_SIZE_T buffer_size;
     TPIE_OS_SIZE_T buffer_start;
 
+	std::vector<bool> group_opened, slot_opened;
+
     //////////////////
     // TPIE wrappers
     ami::err err;
